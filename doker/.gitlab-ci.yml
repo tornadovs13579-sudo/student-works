@@ -1,0 +1,48 @@
+stages:
+  - build
+  - diff
+  - deploy
+
+variables:
+  K8S_NAMESPACE: "iv323"
+  RELEASE_NAME: "iv323s15-app"
+
+.build_setup: &build_setup
+  - |
+    if [ -n "$CI_COMMIT_TAG" ]; then
+        export IMAGE_TAG=$CI_COMMIT_TAG
+    else
+        export IMAGE_TAG=$CI_COMMIT_SHORT_SHA
+    fi
+
+build:
+  stage: build
+  image: docker:cli
+  services:
+    - docker:dind
+  before_script:
+    - *build_setup
+    - docker context create ci
+    - docker buildx create --name multiarch-builder --driver docker-container --use ci
+    - docker login -u $HAWK_REGISTRY_USER -p $HAWK_REGISTRY_PASSWORD $HAWK_REGISTRY 
+  script:
+    - docker buildx build --platform linux/amd64,linux/arm64 -t $HAWK_REGISTRY_IMAGE:$IMAGE_TAG --push .
+
+diff:
+  stage: diff
+  image: registry.csc.sibsutis.ru/csc-public/internal-container-images/k8s-tools:latest
+  before_script:
+    - *build_setup
+  script:
+    - helm diff upgrade $RELEASE_NAME ./helm -n $K8S_NAMESPACE --set image.tag=$IMAGE_TAG --allow-unreleased
+
+
+deploy:
+  stage: deploy
+  image: registry.csc.sibsutis.ru/csc-public/internal-container-images/k8s-tools:latest
+  before_script:
+    - *build_setup
+  script:
+    - helm upgrade $RELEASE_NAME ./helm -n $K8S_NAMESPACE --set image.tag=$IMAGE_TAG --install
+  rules:
+    - when: manual

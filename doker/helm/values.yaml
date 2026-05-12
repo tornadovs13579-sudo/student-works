@@ -1,0 +1,46 @@
+global:
+  labels:
+    owner: "iv323s15"
+
+replicaCount: 1
+
+image:
+  repository: cr.hawk.csc.sibsutis.ru/hawk-dev/iv323s15-arp
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80         
+  targetPort: 8000   
+
+ingress:
+  enabled: true
+  className: "traefik-dev"
+  hosts:
+    - host: "iv323s15-app.hawk-dev.csc.sibsutis.ru"
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  requests:
+    cpu: 64m
+    memory: 64Mi
+  limits:
+    cpu: 128m
+    memory: 128Mi
+
+probes:
+  readiness:
+    path: /      
+    port: 8000     
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  liveness:
+    path: /
+    port: 8000     
+  startup:
+    path: /
+    port: 8000      

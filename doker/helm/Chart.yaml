@@ -1,0 +1,9 @@
+apiVersion: v2
+name: iv323s15-app
+description: A Helm chart for Kubernetes
+global:
+  labels:
+    owner: "iv323s15"
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
